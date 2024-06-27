@@ -1,42 +1,42 @@
 defmodule ProducerConsumer.Consumer do
-  @type consumer_id :: 1 | 2 | 3 | 4
-  @type cache_item :: %{op: String.t(), tipo: :type1 | :type2, produtor: :produtor1 | :produtor2}
+  use GenServer
 
-  def start_consumers() do
-    for id <- 1..4 do
-      consumer_pid = spawn_link(fn -> consumer_loop(id) end)
-      ProducerConsumer.Producer.register_consumer(consumer_pid)
+  def start_link(consumer_id) do
+    GenServer.start_link(__MODULE__, consumer_id, name: via_tuple(consumer_id))
+  end
+
+  defp via_tuple(consumer_id) do
+    {:via, Registry, {ProducerConsumer.Registry, consumer_id}}
+  end
+
+  def init(consumer_id) do
+    Registry.register(ProducerConsumer.Registry, consumer_id, self())
+    schedule_consume()
+    {:ok, consumer_id}
+  end
+
+  def handle_info(:consume, consumer_id) do
+    case ProducerConsumer.Cache.get_item() do
+      {:ok, item} ->
+        consume_item(item)
+        schedule_consume()
+      :empty ->
+        schedule_consume()
     end
+    {:noreply, consumer_id}
   end
 
-  def notify_consumer(cache_item) do
-    send(self(), {:new_item, cache_item})
+  defp schedule_consume do
+    Process.send_after(self(), :consume, 1000)  # Ajuste o intervalo conforme necessário
   end
 
-
-  defp consumer_loop(consumer_id) do
-    receive do
-      {:new_item, cache_item} ->
-        consume_item(consumer_id, cache_item)
-        consumer_loop(consumer_id)
-    end
+  defp consume_item(%{tipo: :type1} = item) do
+    Process.sleep(7000)  # Consumo de 7 segundos para tipo1
+    IO.puts("Item consumido pelo consumidor #{self()}: #{inspect(item)}")
   end
 
-  defp consume_item(consumer_id, cache_item) do
-    consumption_time = case cache_item.tipo do
-      :type1 -> 7000
-      :type2 -> 15000
-    end
-
-    IO.puts("Consumer #{consumer_id} - Iniciando consumo de #{cache_item.tipo} (OP: #{cache_item.op}) às #{format_timestamp()} - Tempo estimado: #{consumption_time / 1000}s")
-
-    :timer.sleep(consumption_time)
-
-    IO.puts("Consumer #{consumer_id} - Finalizou consumo de #{cache_item.tipo} (OP: #{cache_item.op}) às #{format_timestamp()}")
-  end
-
-  defp format_timestamp() do
-    {{_, _, _}, {hour, min, sec}} = :calendar.universal_time()
-    "#{hour}:#{min}:#{sec}"
+  defp consume_item(%{tipo: :type2} = item) do
+    Process.sleep(15000)  # Consumo de 15 segundos para tipo2
+    IO.puts("Item consumido pelo consumidor #{self()}: #{inspect(item)}")
   end
 end

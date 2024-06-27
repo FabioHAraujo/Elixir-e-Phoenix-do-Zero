@@ -2,41 +2,35 @@ defmodule ProducerConsumer.Cache do
   use GenServer
 
   def start_link(_) do
-    GenServer.start_link(__MODULE__, %{cache: [], consumers: []}, name: __MODULE__)
+    GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
-  def init(state), do: {:ok, state}
-
-  def handle_call(:get_cache, _from, state) do
-    {:reply, state.cache, state}
+  def init(_) do
+    {:ok, %{cache: []}}
   end
 
-  def handle_cast({:add_item, item}, state) do
-    new_state = Map.update!(state, :cache, fn cache -> [item | cache] end)
-    notify_consumers(item, new_state)
-    {:noreply, new_state}
+  def store_item(item) do
+    GenServer.call(__MODULE__, {:store_item, item})
   end
 
-  def handle_cast({:register_consumer, pid}, state) do
-    new_state = Map.update!(state, :consumers, fn consumers -> [pid | consumers] end)
-    {:noreply, new_state}
+  def get_item do
+    GenServer.call(__MODULE__, :get_item)
   end
 
-  defp notify_consumers(item, state) do
-    Enum.each(state.consumers, fn consumer ->
-      send(consumer, {:new_item, item})
-    end)
+  def handle_call({:store_item, item}, _from, state) do
+    new_cache = [item | state.cache]
+    if length(new_cache) >= 100 do
+      IO.puts("Cache completo: #{length(new_cache)}")
+    end
+    {:reply, :ok, %{state | cache: new_cache}}
   end
 
-  def register_consumer(pid) do
-    GenServer.cast(__MODULE__, {:register_consumer, pid})
-  end
-
-  def add_item(item) do
-    GenServer.cast(__MODULE__, {:add_item, item})
-  end
-
-  def get_cache() do
-    GenServer.call(__MODULE__, :get_cache)
+  def handle_call(:get_item, _from, state) do
+    case state.cache do
+      [] ->
+        {:reply, :empty, state}
+      [item | rest] ->
+        {:reply, {:ok, item}, %{state | cache: rest}}
+    end
   end
 end

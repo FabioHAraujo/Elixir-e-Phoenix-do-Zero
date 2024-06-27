@@ -7,6 +7,7 @@ defmodule ProducerConsumer.Producer do
   @type cache_item :: %{op: String.t(), tipo: item_type, produtor: producer_name}
 
   @cache_limit 100
+  @cache_resume 60
 
   def start_link(_) do
     Agent.start_link(fn -> %{cache: [], op_number: 1, consumers: []} end, name: __MODULE__)
@@ -70,7 +71,7 @@ defmodule ProducerConsumer.Producer do
 
   defp format_timestamp() do
     {{_, _, _}, {hour, min, sec}} = :calendar.universal_time()
-    "#{hour}:#{min}:#{sec}"
+    "#{hour-3}:#{min}:#{sec}"
   end
 
   defp store_in_cache(cache_item) do
@@ -86,13 +87,20 @@ defmodule ProducerConsumer.Producer do
   defp notify_consumers(cache_item) do
     consumers = Agent.get(__MODULE__, & &1.consumers)
     Enum.each(consumers, fn consumer_pid ->
-      send(consumer_pid, {:new_item, cache_item})
+      send_consumer_process(consumer_pid, cache_item)
     end)
   end
 
   def register_consumer(consumer_pid) do
     Agent.update(__MODULE__, fn state ->
       %{state | consumers: [consumer_pid | state.consumers]}
+    end)
+  end
+
+  defp send_consumer_process(_consumer_pid, cache_item) do
+    # Spawn a new process for each consumer and send the message
+    spawn_link(fn ->
+      ProducerConsumer.Consumer.notify_consumer(cache_item)
     end)
   end
 

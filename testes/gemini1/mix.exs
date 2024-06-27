@@ -1,21 +1,21 @@
-defmodule ProducerConsumer2.MixProject do
+defmodule Gemini1.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :producer_consumer2,
+      app: :gemini1,
       version: "0.1.0",
       elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      escript: [main_module: Gemini1]
     ]
   end
 
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger],
-      mod: {ProducerConsumer.Application, []}
+      extra_applications: [:logger]
     ]
   end
 

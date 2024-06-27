@@ -1,9 +1,9 @@
-defmodule ProducerConsumer2.MixProject do
+defmodule Teste3.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :producer_consumer2,
+      app: :teste3,
       version: "0.1.0",
       elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
@@ -14,8 +14,7 @@ defmodule ProducerConsumer2.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger],
-      mod: {ProducerConsumer.Application, []}
+      extra_applications: [:logger]
     ]
   end
 
